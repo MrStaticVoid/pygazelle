@@ -58,8 +58,27 @@ class GazelleAPI(object):
         self.cached_requests = {}
         self.cached_categories = {}
         self.site = "https://what.cd/"
-        self.rate_limit = 2.0 # seconds between requests
+        self.past_request_timestamps = []
         self._login()
+
+    def wait_for_rate_limit(self):
+        # maximum is 5 requests within 10 secs
+        time_frame = 10
+        max_reqs = 5
+
+        slice_point = 0
+
+        while len(self.past_request_timestamps) >= max_reqs:
+            for i, timestamp in enumerate(self.past_request_timestamps):
+                if timestamp < time.time() - time_frame:
+                    slice_point = i + 1
+                else:
+                    break
+
+            if slice_point:
+                self.past_request_timestamps = self.past_request_timestamps[slice_point:]
+            else:
+                time.sleep(0.1)
 
     def _login(self):
         """
@@ -102,8 +121,7 @@ class GazelleAPI(object):
         Makes a generic HTTP request at a given page with a given action.
         Also pass relevant arguments for that action.
         """
-        while time.time() - self.last_request < self.rate_limit:
-            time.sleep(0.1)
+        self.wait_for_rate_limit()
 
         url = "%s/%s" % (self.site, sitepage)
         params = {'action': action}
@@ -111,7 +129,7 @@ class GazelleAPI(object):
             params['auth'] = self.authkey
         params.update(kwargs)
         r = self.session.get(url, params=params, allow_redirects=False)
-        self.last_request = time.time()
+        self.past_request_timestamps.append(time.time())
         return r.content
 
     def get_user(self, id):
@@ -213,6 +231,24 @@ class GazelleAPI(object):
             return self.cached_torrents[id]
         else:
             return Torrent(id, self)
+
+    def get_torrent_from_info_hash(self, info_hash):
+        """
+        Returns a Torrent for the passed info hash (if one exists), associated with this API object.
+        """
+        try:
+            response = self.request(action='torrent', hash=info_hash.upper())
+        except RequestException:
+            return None
+
+        id = int(response['torrent']['id'])
+        if id in self.cached_torrents.keys():
+            torrent = self.cached_torrents[id]
+        else:
+            torrent = Torrent(id, self)
+
+        torrent.set_torrent_complete_data(response)
+        return torrent
 
     def get_category(self, id, name=None):
         """
