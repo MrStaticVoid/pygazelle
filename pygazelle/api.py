@@ -80,11 +80,20 @@ class GazelleAPI(object):
             else:
                 time.sleep(0.1)
 
+    def logged_in(self):
+        return self.logged_in_user is not None and self.logged_in_user.id == self.userid
+
     def _login(self):
         """
         Private method.
         Logs in user and gets authkey from server.
         """
+
+        if self.logged_in():
+            return
+
+        self.wait_for_rate_limit()
+
         loginpage = 'https://what.cd/login.php'
         data = {'username': self.username,
                 'password': self.password}
@@ -99,6 +108,7 @@ class GazelleAPI(object):
         self.passkey = accountinfo['passkey']
         self.logged_in_user = User(self.userid, self)
         self.logged_in_user.set_index_data(accountinfo)
+        self.past_request_timestamps.append(time.time())
 
     def request(self, action, autologin=True, **kwargs):
         """
@@ -121,7 +131,7 @@ class GazelleAPI(object):
         try:
             return make_request(action, **kwargs)
         except Exception as e:
-            if autologin:
+            if autologin and not self.logged_in():
                 self._login()
                 return make_request(action, **kwargs)
             else:
