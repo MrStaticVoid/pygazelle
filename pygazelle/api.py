@@ -58,7 +58,7 @@ class GazelleAPI(object):
         self.cached_torrents = {}
         self.cached_requests = {}
         self.cached_categories = {}
-        self.site = "https://what.cd"
+        self.site = "https://what.cd/"
         self.past_request_timestamps = []
 
     def wait_for_rate_limit(self):
@@ -144,7 +144,7 @@ class GazelleAPI(object):
         """
         self.wait_for_rate_limit()
 
-        url = "%s/%s" % (self.site, sitepage)
+        url = "%s%s" % (self.site, sitepage)
         params = {'action': action}
         if self.authkey:
             params['auth'] = self.authkey
