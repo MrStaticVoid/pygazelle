@@ -403,6 +403,8 @@ class GazelleAPI(object):
         return {'curr_page': curr_page, 'pages': pages, 'results': matching_torrents}
 
     def generate_torrent_link(self, id):
+        if not self.logged_in():
+            self._login()
         url = "%storrents.php?action=download&id=%s&authkey=%s&torrent_pass=%s" %\
               (self.site, id, self.logged_in_user.authkey, self.logged_in_user.passkey)
         return url
