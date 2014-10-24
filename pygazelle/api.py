@@ -380,7 +380,7 @@ class GazelleAPI(object):
         (they have a reference to their parent TorrentGroup).
         """
 
-        response = self.request(action='browse', **kwargs)
+        response = self.request(action='browse', searchsubmit=1, group_results=1, **kwargs)
         results = response['results']
         if len(results):
             curr_page = response['currentPage']
